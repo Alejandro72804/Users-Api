@@ -29,7 +29,7 @@ app.get('/', (req, res) => {
     res.send('User API');
 })
 
-// GET users
+// GET consultar todos los usuarios
 app.get('/api/students', async (req, res) => {
     try {
         const result = await sql.query("SELECT * FROM Users");
@@ -39,8 +39,8 @@ app.get('/api/students', async (req, res) => {
     }
 });
 
-// GET /users/:cedula
-app.get('/api/findStudents/:cedula', async (req, res) => {
+// GET consultar usuario por cedula
+app.get('/api/students/:cedula', async (req, res) => {
     const { cedula } = req.params;
 
     try {
@@ -60,8 +60,8 @@ app.get('/api/findStudents/:cedula', async (req, res) => {
 });
 
 
-// POST /users
-app.post('/api/createStudents', async (req, res) => {
+// POST crear usuairo
+app.post('/api/students', async (req, res) => {
     const { cedula, name, email } = req.body;
 
     if (!cedula || !name || !email) {
@@ -81,8 +81,8 @@ app.post('/api/createStudents', async (req, res) => {
     }
 });
 
-// DELETE /users/:cedula -> Eliminar usuario
-app.delete('/api/deleteStudents/:cedula', async (req, res) => {
+// DELETE eliminar usuario por cedula
+app.delete('/api/students/:cedula', async (req, res) => {
     const { cedula } = req.params;
 
     try {
