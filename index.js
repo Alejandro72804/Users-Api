@@ -1,13 +1,29 @@
+// inicio API USERs
 const express = require('express');
-const app = express();
+const sql = require('mssql');
+require('dotenv').config();
 
+const app = express();
 app.use(express.json());
 
-const students = [
-    { id: 1, name: 'Alice', age: 20 },
-    { id: 2, name: 'Bob', age: 22 },
-    { id: 3, name: 'Charlie', age: 21 },
-]
+// Configuración BD SQLS
+
+const dbConfig = {
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    server: process.env.DB_SERVER,
+    database: process.env.DB_DATABASE,
+    instanceName: process.env.DB_INSTANCE,
+    options: {
+        encrypt: false,
+        trustServerCertificate: true
+    }
+};
+
+// Conexión
+sql.connect(dbConfig)
+    .then(() => console.log("Conectado a SQL Server"))
+    .catch(err => console.error("Error de conexión:", err));
 
 app.get('/', (req, res) => {
     res.send('User API');
