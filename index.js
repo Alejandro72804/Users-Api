@@ -36,7 +36,11 @@ app.get('/', (req, res) => {
 app.get('/api/students', async (req, res) => {
     try {
         const result = await sql.query("SELECT * FROM Users");
-        logger.info("Usuarios desplegados correctamente");
+        if (result.recordset.length === 0) {
+            logger.warn("No se encontraron usuarios en la base de datos");
+            return res.status(404).json({ message: "No se encontraron usuarios registrados" });
+        }
+        logger.info("Usuarios desplegados correctamente, existe(n) " + result.recordset.length + " usuario(s)");
         res.json(result.recordset);
     } catch (error) {
         logger.error(error);
@@ -64,7 +68,7 @@ app.get('/api/students/:cedula', async (req, res) => {
             logger.warn(`Usuario no encontrado con cédula: ${cedula}`);
             return res.status(404).json({ message: "Usuario no encontrado" });
         }
-        logger.info(`Usuario encontrado`);
+        logger.info(`Usuario encontrado con cédula: ${cedula}`);
         res.json(result.recordset[0]);
 
     } catch (error) {
@@ -121,7 +125,7 @@ app.delete('/api/students/:cedula', async (req, res) => {
     const { cedula } = req.params;
 
     if (!/^\d+$/.test(cedula) || cedula.length < 6 || cedula.length > 10) {
-        logger.warn(`Intento de registro con cédula inválida: ${cedula}`);
+        logger.warn(`Intento de eliminacion con cédula inválida: ${cedula}`);
         return res.status(400).json({
             message: "La cédula no debe tener letras ni simbolos, debe contener entre 6 a 10 dígitos numéricos"
     });
@@ -136,7 +140,7 @@ app.delete('/api/students/:cedula', async (req, res) => {
             logger.warn(`Intento de eliminación de usuario no encontrado con cédula: ${cedula}`);
             return res.status(404).json({ message: "Usuario no encontrado" });
         }
-        logger.info(`Usuario eliminado correctamente`);
+        logger.info(`Usuario eliminado correctamente con cédula: ${cedula}`);
         res.json({ message: "Usuario eliminado correctamente" });
 
     } catch (error) {
