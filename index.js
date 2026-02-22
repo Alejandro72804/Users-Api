@@ -1,6 +1,8 @@
 // inicio API USERs
 const express = require('express');
 const sql = require('mssql');
+const logger = require('./logger');
+
 require('dotenv').config();
 
 const app = express();
@@ -22,8 +24,8 @@ const dbConfig = {
 
 // Conexión
 sql.connect(dbConfig)
-    .then(() => console.log("Conectado a SQL Server"))
-    .catch(err => console.error("Error de conexión:", err));
+    .then(() => logger.info("Conectado a SQL Server"))
+    .catch(err => logger.error("Error de conexión:", err));
 
 app.get('/', (req, res) => {
     res.send('User API');
@@ -35,6 +37,7 @@ app.get('/api/students', async (req, res) => {
         const result = await sql.query("SELECT * FROM Users");
         res.json(result.recordset);
     } catch (error) {
+        logger.error(error);
         res.status(500).json({ message: "Error al obtener usuarios" });
     }
 });
@@ -55,6 +58,7 @@ app.get('/api/students/:cedula', async (req, res) => {
         res.json(result.recordset[0]);
 
     } catch (error) {
+        logger.error(error);
         res.status(500).json({ message: "Error al buscar usuario" });
     }
 });
@@ -68,7 +72,21 @@ app.post('/api/students', async (req, res) => {
         return res.status(400).json({ message: "Cedula, name y email son requeridos" });
     }
 
+    if (!/^\d+$/.test(cedula) || cedula.length < 8 || cedula.length > 11) {
+    return res.status(400).json({
+        message: "La cédula debe contener entre 8 y 11 dígitos numéricos"
+    });
+}
+
     try {
+        const ccexist = await sql.query`
+            SELECT * FROM Users WHERE cc = ${cedula}
+        `;
+
+        if (ccexist.recordset.length > 0) {
+            return res.status(400).json({ message: "La cédula ya se encuentra registrada" });
+        }
+        
         await sql.query`
             INSERT INTO Users (cc, name, email)
             VALUES (${cedula}, ${name}, ${email})
@@ -77,7 +95,10 @@ app.post('/api/students', async (req, res) => {
         res.status(201).json({ message: "Usuario creado correctamente" });
 
     } catch (error) {
-        res.status(500).json({ message: "Error al crear usuario", error: error.message });
+        logger.error(error);
+        return res.status(500).json({
+            message: "Error interno del servidor"
+        });
     }
 });
 
@@ -97,9 +118,10 @@ app.delete('/api/students/:cedula', async (req, res) => {
         res.json({ message: "Usuario eliminado correctamente" });
 
     } catch (error) {
+        logger.error(error);
         res.status(500).json({ message: "Error al eliminar usuario" });
     }
 });
 
 const port = process.env.port;
-app.listen(port, () => console.log(`Escuchando en el puerto ${port}...`)); 
+app.listen(port, () => logger.info(`Escuchando en el puerto ${port}...`)); 
