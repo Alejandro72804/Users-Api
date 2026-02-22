@@ -2,6 +2,7 @@
 const express = require('express');
 const sql = require('mssql');
 const logger = require('./logger');
+const { log } = require('winston');
 
 require('dotenv').config();
 
@@ -28,13 +29,14 @@ sql.connect(dbConfig)
     .catch(err => logger.error("Error de conexión:", err));
 
 app.get('/', (req, res) => {
-    res.send('User API');
+    res.send('Users-API');
 })
 
 // GET consultar todos los usuarios
 app.get('/api/students', async (req, res) => {
     try {
         const result = await sql.query("SELECT * FROM Users");
+        logger.info("Usuarios desplegados correctamente");
         res.json(result.recordset);
     } catch (error) {
         logger.error(error);
@@ -46,15 +48,23 @@ app.get('/api/students', async (req, res) => {
 app.get('/api/students/:cedula', async (req, res) => {
     const { cedula } = req.params;
 
+    if (!/^\d+$/.test(cedula) || cedula.length < 6 || cedula.length > 10) {
+        logger.warn(`Intento de busqueda con cédula inválida: ${cedula}`);
+        return res.status(400).json({
+            message: "La cédula no debe tener letras ni simbolos, debe contener entre 6 a 10 dígitos numéricos"
+    });
+    }
+
     try {
         const result = await sql.query`
             SELECT * FROM Users WHERE cc = ${cedula}
         `;
 
         if (result.recordset.length === 0) {
+            logger.warn(`Usuario no encontrado con cédula: ${cedula}`);
             return res.status(404).json({ message: "Usuario no encontrado" });
         }
-
+        logger.info(`Usuario encontrado`);
         res.json(result.recordset[0]);
 
     } catch (error) {
@@ -69,14 +79,16 @@ app.post('/api/students', async (req, res) => {
     const { cedula, name, email } = req.body;
 
     if (!cedula || !name || !email) {
+        logger.warn("Intento de registro con datos incompletos");
         return res.status(400).json({ message: "Cedula, name y email son requeridos" });
     }
 
-    if (!/^\d+$/.test(cedula) || cedula.length < 8 || cedula.length > 11) {
-    return res.status(400).json({
-        message: "La cédula debe contener entre 8 y 11 dígitos numéricos"
+    if (!/^\d+$/.test(cedula) || cedula.length < 6 || cedula.length > 10) {
+        logger.warn(`Intento de registro con cédula inválida: ${cedula}`);
+        return res.status(400).json({
+            message: "La cédula no debe tener letras ni simbolos, debe contener entre 6 a 10 dígitos numéricos"
     });
-}
+    }
 
     try {
         const ccexist = await sql.query`
@@ -84,6 +96,7 @@ app.post('/api/students', async (req, res) => {
         `;
 
         if (ccexist.recordset.length > 0) {
+            logger.warn(`Intento de registro con cédula existente: ${cedula}`);
             return res.status(400).json({ message: "La cédula ya se encuentra registrada" });
         }
         
@@ -92,6 +105,7 @@ app.post('/api/students', async (req, res) => {
             VALUES (${cedula}, ${name}, ${email})
         `;
 
+        logger.info(`Usuario creado: ${name} (cédula: ${cedula})`);
         res.status(201).json({ message: "Usuario creado correctamente" });
 
     } catch (error) {
@@ -106,15 +120,23 @@ app.post('/api/students', async (req, res) => {
 app.delete('/api/students/:cedula', async (req, res) => {
     const { cedula } = req.params;
 
+    if (!/^\d+$/.test(cedula) || cedula.length < 6 || cedula.length > 10) {
+        logger.warn(`Intento de registro con cédula inválida: ${cedula}`);
+        return res.status(400).json({
+            message: "La cédula no debe tener letras ni simbolos, debe contener entre 6 a 10 dígitos numéricos"
+    });
+    }
+
     try {
         const result = await sql.query`
             DELETE FROM Users WHERE cc = ${cedula}
         `;
 
         if (result.rowsAffected[0] === 0) {
+            logger.warn(`Intento de eliminación de usuario no encontrado con cédula: ${cedula}`);
             return res.status(404).json({ message: "Usuario no encontrado" });
         }
-
+        logger.info(`Usuario eliminado correctamente`);
         res.json({ message: "Usuario eliminado correctamente" });
 
     } catch (error) {
@@ -124,4 +146,21 @@ app.delete('/api/students/:cedula', async (req, res) => {
 });
 
 const port = process.env.port;
+
+// Middleware de manejo de error estandar
+app.use((err, req, res, next) => {
+
+    logger.error(err);
+
+    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+        return res.status(400).json({
+            message: "JSON inválido en el cuerpo de la petición"
+        });
+    }
+
+    return res.status(500).json({
+        message: "Error interno del servidor"
+    });
+});
+
 app.listen(port, () => logger.info(`Escuchando en el puerto ${port}...`)); 
