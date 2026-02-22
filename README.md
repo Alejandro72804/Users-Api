@@ -125,7 +125,7 @@ Los errores son registrados utilizando Winston en:
  * Archivo logs/error.log
  * Archivo logs/combined.log
  
-Test. Mapeo y flujo de errores de la API:
+### Test. Mapeo y flujo de errores de la API:
  
 <img width="887" height="499" alt="{A1C64A5B-2C03-4D39-AEC4-9BAA982FA8FC}" src="https://github.com/user-attachments/assets/005cb0c5-687d-4524-b931-d4b31e9c98f7" />
 
